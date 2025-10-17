@@ -1,12 +1,17 @@
 package ui;
 
+import exception.BookBorrowedException;
+import exception.BookNotExistException;
+import exception.BookNotFoundException;
 import exception.InvalidSearchParamException;
 import exception.InvalidSearchUserIDException;
+import exception.UserNotFoundException;
 import model.Book;
 import model.User;
 import service.Library;
 
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 
 public class ConsoleMenu {
@@ -25,6 +30,8 @@ public class ConsoleMenu {
                 case "4" -> library.displayUsers();
                 case "5" -> findBooks();
                 case "6" -> findUsers();
+                case "7" -> bookLoan();
+                case "8" -> bookReturn();
                 case "Q", "q" -> System.exit(0);
                 default -> displayMenu();
              }
@@ -38,6 +45,8 @@ public class ConsoleMenu {
         System.out.println("4. Просмотр всех читателей");
         System.out.println("5. Поиск книг по: названию, автору, году");
         System.out.println("6. Поиск пользователя по ID");
+        System.out.println("7. Выдача книги пользователю");
+        System.out.println("8. Возврат книги пользователем");
         System.out.println("Q. Выход");
     }
 
@@ -120,6 +129,84 @@ public class ConsoleMenu {
             }
         } catch (Exception e) {
             System.out.println(e.getMessage());
+        }
+    }
+
+    private void bookLoan() {
+        HashMap<Integer, User> usersFind;
+        try {
+            usersFind = checkUser();
+            if (usersFind == null) {
+                return;
+                }
+            Map.Entry<Integer, User> firstEntry = usersFind.entrySet().iterator().next();
+            User firstUser = firstEntry.getValue();
+            int countBook = firstUser.CountLoansBook();
+            if (countBook >= 3) {
+              System.out.println(firstUser.getName() + " не может взять еще книг. У него максимальное колличество.");
+                return;
+            }
+            else {
+                countBook = 3 - countBook;
+                System.out.println(firstUser.getName() + " может взять еще " + countBook + " книг");
+            }
+            System.out.println("Выбор книг (не более " + countBook + ", окончание - пустая строка)");
+
+            int bookId = 0;
+            for (int i = 0; i < countBook; i++) {
+                try {
+                    bookId = Integer.parseInt(getStringValue("ID книги:"));
+                } catch (NumberFormatException e) {
+                    bookId = 0;
+                }
+                if (bookId == 0) {
+                    break; // Выход из цикла
+                }
+                try {
+                    library.addLoan(bookId, firstUser.getId());
+                } catch (BookBorrowedException | BookNotExistException | BookNotFoundException | UserNotFoundException e) {
+                  System.out.println(e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
+    private void bookReturn() {
+        HashMap<Integer, User> usersFind;
+        try {
+            usersFind = checkUser();
+            if (usersFind == null) {
+                return;
+            }
+            Map.Entry<Integer, User> firstEntry = usersFind.entrySet().iterator().next();
+            User firstUser = firstEntry.getValue();
+            int countBook = firstUser.CountLoansBook();
+            if (countBook == 0) {
+                System.out.println(firstUser.getName() + " не взял еще ни одной книги.");
+                return;
+            }
+            else {
+                System.out.println(firstUser.getName() + " может вернуть " + countBook + " книги");
+            }
+
+            int bookId = 0;
+            try {
+                bookId = Integer.parseInt(getStringValue("ID книги:"));
+            } catch (NumberFormatException e) {
+                bookId = 0;
+            }
+            if (bookId == 0) {
+                return;
+            }
+            try {
+                library.removeLoan(bookId, firstUser.getId());
+            } catch (BookBorrowedException | BookNotFoundException | UserNotFoundException e) {
+                System.out.println(e.getMessage());
+            }
+        } catch (Exception e) {
+        System.out.println(e.getMessage());
         }
     }
 
