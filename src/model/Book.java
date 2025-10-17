@@ -57,6 +57,10 @@ public class Book {
         return id + "  ----  " + title + " (" + author + ", " + year + "), всего/доступно = " + totalCopies + "/" + availableCopies;
     }
 
+    public String bookInfo() {
+        return title + " (" + author + ", " + year + ")";
+    }
+
     public void getBook() {
         if (this.availableCopies >= 1) {
             this.availableCopies--;

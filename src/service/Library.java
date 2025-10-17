@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.time.temporal.ChronoUnit;
 
 public class Library {
 
@@ -243,4 +244,34 @@ public class Library {
         return user;
     }
 
+    public void displayAllLoanBook() throws BookNotFoundException, UserNotFoundException {
+        for (Loan loan : loans) {
+            System.out.println("Книгу " +  findBookById(loan.getBookId()).bookInfo() + " взял " + findUserById(loan.getUserId()).getName() +
+                               " дата " + loan.getLoanDate() + " вернул " + loan.getReturnDate());
+        }
+    }
+
+    public void displayLoanExpiredBook() throws BookNotFoundException, UserNotFoundException {
+        for (Loan loan : loans) {
+            int betweenDay = Math.toIntExact(ChronoUnit.DAYS.between(loan.getLoanDate(), LocalDate.now()));
+            if (betweenDay > 30) {
+                System.out.println("Книгу " + findBookById(loan.getBookId()).bookInfo() + " взял " + findUserById(loan.getUserId()).getName() +
+                        " дата " + loan.getLoanDate() + " просрочка " + (betweenDay - 30) + " дней");
+            }
+        }
+    }
+
+    public void displayUserLoanBook(Integer userId) throws BookNotFoundException, UserNotFoundException {
+        for (Loan loan : loans.stream().filter(l -> l.getUserId() == userId).toList()) {
+            System.out.println("Книгу " + findBookById(loan.getBookId()).bookInfo() + " взял " + findUserById(loan.getUserId()).getName() +
+                    " дата " + loan.getLoanDate() + " вернул " + loan.getReturnDate());
+        }
+    }
+
+    public void displayUserLoanFromBook(Integer bookId) throws BookNotFoundException, UserNotFoundException {
+        for (Loan loan : loans.stream().filter(l -> l.getBookId() == bookId).toList()) {
+            System.out.println("Книгу " + findBookById(loan.getBookId()).bookInfo() + " взял " + findUserById(loan.getUserId()).getName() +
+                    " дата " + loan.getLoanDate() + " вернул " + loan.getReturnDate());
+        }
+    }
 }
