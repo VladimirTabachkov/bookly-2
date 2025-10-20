@@ -10,6 +10,7 @@ import model.User;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -43,6 +44,12 @@ public class Library {
         loadTableFromDB(fileNameLoan, "LOAN");
     }
 
+    public void finish() {
+        SaveTableToDB(fileNameBook, "BOOKS");
+        SaveTableToDB(fileNameUser, "USERS");
+        SaveTableToDB(fileNameLoan, "LOAN");
+    }
+
     private void loadTableFromDB(String fileName, String tableName) {
         switch (tableName) {
             case "BOOKS":
@@ -71,11 +78,54 @@ public class Library {
                 else {
                     try {
                         addLoan(data[0], data[1]);
-                    } catch (BookNotFoundException | UserNotFoundException | BookNotExistException |
-                             BookBorrowedException e) {
-                        System.out.println(e.getMessage());
+                    } catch (BookNotFoundException e) {
+                        throw new RuntimeException(e);
+                    } catch (UserNotFoundException e) {
+                        throw new RuntimeException(e);
+                    } catch (BookNotExistException e) {
+                        throw new RuntimeException(e);
+                    } catch (BookBorrowedException e) {
+                        throw new RuntimeException(e);
                     }
                 }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void SaveTableToDB(String fileName, String tableName) {
+        try (FileWriter writer = new FileWriter(fileName, false)) {
+            switch (tableName) {
+                case "BOOKS":
+                    for (Book book : books.values()) {
+                        try {
+                            writer.write("%s;%s;%d;%d\n".formatted(book.getTitle(), book.getAuthor(), book.getYear(), book.getAvailableCopies()));
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                    break;
+                case "USERS":
+                    for (User user : users.values()) {
+                        try {
+                            writer.write("%s;%s\n".formatted(user.getName(), user.getEmail()));
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                    break;
+                case "LOAN":
+                    for (Loan loan : loans) {
+                        try {
+                            writer.write("%s;%s\n".formatted(loan.getBookId(), loan.getUserId()));
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                    break;
+                default:
+                    throw new IllegalStateException("Unexpected value: " + tableName);
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -224,7 +274,7 @@ public class Library {
     // Поиск книги по: ID
     public Book findBookById(Integer id) throws BookNotFoundException {
         Book book = null;
-        if (id != 0 && users.containsKey(id)) {
+        if (id != 0 && books.containsKey(id)) {
             book = books.get(id);
         }
         if (book == null) {

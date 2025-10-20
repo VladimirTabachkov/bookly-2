@@ -14,6 +14,13 @@ public class Loan {
         this.loanDate = LocalDate.now();
     }
 
+    public Loan(int bookId, int userId, LocalDate loanDate, LocalDate returnDate) {
+        this.bookId = bookId;
+        this.userId = userId;
+        this.loanDate = loanDate;
+        this.returnDate = returnDate;
+    }
+
     public int getBookId() {
         return bookId;
     }

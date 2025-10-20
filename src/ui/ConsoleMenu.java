@@ -36,10 +36,15 @@ public class ConsoleMenu {
                 case "L", "l" -> bookLoanList();
                 case "U", "u" -> bookLoanListUser();
                 case "B", "b" -> userLoanListBook();
-                case "Q", "q" -> System.exit(0);
+                case "Q", "q" -> CloseProject();
                 default -> displayMenu();
              }
         }
+    }
+
+    private void CloseProject() {
+        library.finish();
+        System.exit(0);
     }
 
     private static void displayMenu() {
