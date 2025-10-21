@@ -1,5 +1,9 @@
 package service;
 
+import exception.BookBorrowedException;
+import exception.BookNotExistException;
+import exception.BookNotFoundException;
+import exception.UserNotFoundException;
 import model.Book;
 import model.User;
 import org.junit.jupiter.api.Assertions;
@@ -7,6 +11,9 @@ import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class LibraryTest {
     private static Library library = Library.createLibrary();
@@ -54,4 +61,27 @@ class LibraryTest {
         Assertions.assertNotNull(users);
         Assertions.assertEquals(2, users.size());
     }
+
+    //проверка выдачи книги читателю
+    @Test
+    void loanBookTest() throws UserNotFoundException, BookNotExistException, BookNotFoundException, BookBorrowedException {
+        Library library1 = new Library();
+        UserNotFoundException excp1 = assertThrows(UserNotFoundException.class, () -> library1.addLoan(1, 7));
+        Assertions.assertEquals("Пользователь не найден", excp1.getMessage());
+        BookNotExistException excp2 = Assertions.assertThrows(BookNotExistException.class, () -> library1.addLoan(1, 1));
+        Assertions.assertEquals("Экземпляры книги закончились", excp2.getMessage());
+    }
+
+    //проверка возврата книги читателю
+    @Test
+    void returnBookTest() throws UserNotFoundException, BookNotFoundException, BookBorrowedException {
+        Library library1 = new Library();
+        UserNotFoundException excp1 = assertThrows(UserNotFoundException.class, () -> library1.removeLoan(1, 7));
+        Assertions.assertEquals("Пользователь не найден", excp1.getMessage());
+        BookBorrowedException excp2 = assertThrows(BookBorrowedException.class, () -> library1.removeLoan(2, 2));
+        Assertions.assertEquals("Эту книгу читателю не выдавали!", excp2.getMessage());
+        library1.removeLoan(1, 1);
+        assertDoesNotThrow(() -> library1.removeLoan(1, 1));
+    }
+
 }

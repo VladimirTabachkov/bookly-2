@@ -1,21 +1,33 @@
 package service;
 
+import exception.BookBorrowedException;
+import exception.BookNotExistException;
+import exception.BookNotFoundException;
+import exception.UserNotFoundException;
 import model.Book;
+import model.Loan;
 import model.User;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.time.temporal.ChronoUnit;
 
 public class Library {
 
     private static final Map<Integer, Book> books = new HashMap<>();
     private static final Map<Integer, User> users = new HashMap<>();
+    private static List<Loan> loans = new ArrayList<>();
 
     private static final String fileNameBook  = "src/data/books.txt";
     private static final String fileNameUser = "src/data/users.txt";
+    private static final String fileNameLoan = "src/data/loan.txt";
 
     public Library() {
     }
@@ -29,6 +41,13 @@ public class Library {
     public void init() {
         loadTableFromDB(fileNameBook, "BOOKS");
         loadTableFromDB(fileNameUser, "USERS");
+        loadTableFromDB(fileNameLoan, "LOAN");
+    }
+
+    public void finish() {
+        saveTableToDB(fileNameBook, "BOOKS");
+        saveTableToDB(fileNameUser, "USERS");
+        saveTableToDB(fileNameLoan, "LOAN");
     }
 
     private void loadTableFromDB(String fileName, String tableName) {
@@ -38,6 +57,9 @@ public class Library {
                 break;
             case "USERS":
                 users.clear();
+                break;
+            case "LOAN":
+                loans.clear();
                 break;
             default:
                 throw new IllegalStateException("Unexpected value: " + tableName);
@@ -50,9 +72,60 @@ public class Library {
                 if (tableName == "BOOKS") {
                     addBook(data[0], data[1], Integer.parseInt(data[2]), Integer.parseInt(data[3]));
                 }
-                else {
+                else if (tableName == "USERS") {
                     addUser(data[0], data[1]);
                 }
+                else {
+                    try {
+                        addLoan(data[0], data[1]);
+                    } catch (BookNotFoundException e) {
+                        throw new RuntimeException(e);
+                    } catch (UserNotFoundException e) {
+                        throw new RuntimeException(e);
+                    } catch (BookNotExistException e) {
+                        throw new RuntimeException(e);
+                    } catch (BookBorrowedException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void saveTableToDB(String fileName, String tableName) {
+        try (FileWriter writer = new FileWriter(fileName, false)) {
+            switch (tableName) {
+                case "BOOKS":
+                    for (Book book : books.values()) {
+                        try {
+                            writer.write("%s;%s;%d;%d\n".formatted(book.getTitle(), book.getAuthor(), book.getYear(), book.getAvailableCopies()));
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                    break;
+                case "USERS":
+                    for (User user : users.values()) {
+                        try {
+                            writer.write("%s;%s\n".formatted(user.getName(), user.getEmail()));
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                    break;
+                case "LOAN":
+                    for (Loan loan : loans) {
+                        try {
+                            writer.write("%s;%s\n".formatted(loan.getBookId(), loan.getUserId()));
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                    break;
+                default:
+                    throw new IllegalStateException("Unexpected value: " + tableName);
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -93,6 +166,56 @@ public class Library {
         }
         User user = new User(name, email);
         users.put(user.getId(), user);
+    }
+
+    private void addLoan(String bookId, String userId) throws BookNotFoundException, UserNotFoundException, BookNotExistException, BookBorrowedException {
+        if (bookId == null || bookId.trim().isEmpty() || userId == null || userId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Не верные параметры для выдачи книги");
+        }
+        Integer intBookId;
+        try {
+            intBookId = Integer.decode(bookId);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Не верный ID книги");
+        }
+        Integer intUserId;
+        try {
+            intUserId = Integer.decode(userId);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Не верный ID пользователя");
+        }
+        addLoan(intBookId, intUserId);
+    }
+
+    public void addLoan(Integer intBookId, Integer intUserId) throws BookNotFoundException, UserNotFoundException, BookNotExistException, BookBorrowedException {
+        User user = findUserById(intUserId);
+        Book book = findBookById(intBookId);
+        if (book.getAvailableCopies() < 1) {
+            throw new BookNotExistException();
+        }
+        Loan curLoan = user.getUserLoans().stream().filter(l -> l.getBookId() == book.getId() && l.getUserId() == user.getId()).findFirst().orElse(null);
+        if (curLoan != null) {
+            throw new BookBorrowedException("Книга уже есть в списке взятых у читателя");
+        }
+
+        curLoan = new Loan(book.getId(), user.getId());
+        user.getUserLoans().add(curLoan);
+        this.loans.add(curLoan);
+        book.getBook();
+    }
+
+    public void removeLoan(Integer intBookId, Integer intUserId) throws BookBorrowedException, UserNotFoundException, BookNotFoundException {
+        User user = findUserById(intUserId);
+        Book book = findBookById(intBookId);
+        Loan curLoan = user.getUserLoans().stream().filter(l -> l.getBookId() == book.getId() && l.getUserId() == user.getId()).findFirst().orElse(null);
+        if (curLoan == null) {
+            throw new BookBorrowedException("Эту книгу читателю не выдавали!");
+        }
+
+        curLoan.setReturnDate(LocalDate.now());
+        curLoan = this.loans.stream().filter(l -> l.getBookId() == book.getId() && l.getUserId() == user.getId()).findFirst().orElse(null);
+        curLoan.setReturnDate(LocalDate.now());
+        book.returnBook();
     }
 
     public void displayBooks(){
@@ -148,4 +271,57 @@ public class Library {
         return usersFind;
     }
 
+    // Поиск книги по: ID
+    public Book findBookById(Integer id) throws BookNotFoundException {
+        Book book = null;
+        if (id != 0 && books.containsKey(id)) {
+            book = books.get(id);
+        }
+        if (book == null) {
+            throw new BookNotFoundException(); // книга не найдена
+        }
+        return book;
+    }
+
+    public User findUserById(Integer id) throws UserNotFoundException {
+        User user = null;
+        if (id != 0 && users.containsKey(id)) {
+            user = users.get(id);
+        }
+        if (user == null) {
+            throw new UserNotFoundException(); // пользователь не найден
+        }
+        return user;
+    }
+
+    public void displayAllLoanBook() throws BookNotFoundException, UserNotFoundException {
+        for (Loan loan : loans) {
+            System.out.println("Книгу " +  findBookById(loan.getBookId()).bookInfo() + " взял " + findUserById(loan.getUserId()).getName() +
+                               " дата " + loan.getLoanDate() + " вернул " + loan.getReturnDate());
+        }
+    }
+
+    public void displayLoanExpiredBook() throws BookNotFoundException, UserNotFoundException {
+        for (Loan loan : loans) {
+            int betweenDay = Math.toIntExact(ChronoUnit.DAYS.between(loan.getLoanDate(), LocalDate.now()));
+            if (betweenDay > 30) {
+                System.out.println("Книгу " + findBookById(loan.getBookId()).bookInfo() + " взял " + findUserById(loan.getUserId()).getName() +
+                        " дата " + loan.getLoanDate() + " просрочка " + (betweenDay - 30) + " дней");
+            }
+        }
+    }
+
+    public void displayUserLoanBook(Integer userId) throws BookNotFoundException, UserNotFoundException {
+        for (Loan loan : loans.stream().filter(l -> l.getUserId() == userId).toList()) {
+            System.out.println("Книгу " + findBookById(loan.getBookId()).bookInfo() + " взял " + findUserById(loan.getUserId()).getName() +
+                    " дата " + loan.getLoanDate() + " вернул " + loan.getReturnDate());
+        }
+    }
+
+    public void displayUserLoanFromBook(Integer bookId) throws BookNotFoundException, UserNotFoundException {
+        for (Loan loan : loans.stream().filter(l -> l.getBookId() == bookId).toList()) {
+            System.out.println("Книгу " + findBookById(loan.getBookId()).bookInfo() + " взял " + findUserById(loan.getUserId()).getName() +
+                    " дата " + loan.getLoanDate() + " вернул " + loan.getReturnDate());
+        }
+    }
 }

@@ -1,5 +1,7 @@
 package model;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class User {
@@ -7,7 +9,7 @@ public class User {
     private String name;
     private String email;
     private static AtomicInteger counter = new AtomicInteger(1);
-
+    List<Loan> curLoans = new ArrayList<>();
 
     public User(String name, String email) {
         this.id = counter.getAndIncrement();
@@ -31,4 +33,20 @@ public class User {
     public String toString() {
         int recNo = id;
         return recNo + "  ----  " + name + ", " + email;
-    }}
+    }
+
+    public List<Loan> getUserLoans() {
+        return curLoans;
+    }
+
+    public int CountLoansBook() {
+        int i = 0;
+        for (Loan loanBook : curLoans) {
+            if (loanBook.getReturnDate() == null) {
+                i++;
+            }
+        }
+        return i;
+    }
+
+}
