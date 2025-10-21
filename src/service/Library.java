@@ -45,9 +45,9 @@ public class Library {
     }
 
     public void finish() {
-        SaveTableToDB(fileNameBook, "BOOKS");
-        SaveTableToDB(fileNameUser, "USERS");
-        SaveTableToDB(fileNameLoan, "LOAN");
+        saveTableToDB(fileNameBook, "BOOKS");
+        saveTableToDB(fileNameUser, "USERS");
+        saveTableToDB(fileNameLoan, "LOAN");
     }
 
     private void loadTableFromDB(String fileName, String tableName) {
@@ -94,7 +94,7 @@ public class Library {
         }
     }
 
-    private void SaveTableToDB(String fileName, String tableName) {
+    private void saveTableToDB(String fileName, String tableName) {
         try (FileWriter writer = new FileWriter(fileName, false)) {
             switch (tableName) {
                 case "BOOKS":
